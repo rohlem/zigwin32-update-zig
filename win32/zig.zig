@@ -133,8 +133,8 @@ pub fn closeHandle(handle: foundation.HANDLE) void {
 
 pub fn loword(value: anytype) u16 {
     switch (@typeInfo(@TypeOf(value))) {
-        .Int => |int| switch (int.signedness) {
-            .signed => return loword(@as(@Type(.{ .Int = .{ .signedness = .unsigned, .bits = int.bits } }), @bitCast(value))),
+        .int => |int| switch (int.signedness) {
+            .signed => return loword(@as(@Type(.{ .int = .{ .signedness = .unsigned, .bits = int.bits } }), @bitCast(value))),
             .unsigned => return if (int.bits <= 16) value else @intCast(0xffff & value),
         },
         else => {},
@@ -143,8 +143,8 @@ pub fn loword(value: anytype) u16 {
 }
 pub fn hiword(value: anytype) u16 {
     switch (@typeInfo(@TypeOf(value))) {
-        .Int => |int| switch (int.signedness) {
-            .signed => return hiword(@as(@Type(.{ .Int = .{ .signedness = .unsigned, .bits = int.bits } }), @bitCast(value))),
+        .int => |int| switch (int.signedness) {
+            .signed => return hiword(@as(@Type(.{ .int = .{ .signedness = .unsigned, .bits = int.bits } }), @bitCast(value))),
             .unsigned => return @intCast(0xffff & (value >> 16)),
         },
         else => {},
@@ -194,7 +194,7 @@ pub fn scaleDpi(comptime T: type, value: T, dpi: u32) T {
     std.debug.assert(dpi >= 96);
     switch (@typeInfo(T)) {
         .Float => return value * (@as(T, @floatFromInt(dpi)) / @as(T, 96.0)),
-        .Int => return @intFromFloat(@round(@as(f32, @floatFromInt(value)) * (@as(f32, @floatFromInt(dpi)) / 96.0))),
+        .int => return @intFromFloat(@round(@as(f32, @floatFromInt(value)) * (@as(f32, @floatFromInt(dpi)) / 96.0))),
         else => @compileError("scale_dpi does not support type " ++ @typeName(@TypeOf(value))),
     }
 }
@@ -231,19 +231,19 @@ pub fn typedConst2(comptime ReturnType: type, comptime SwitchType: type, comptim
     const value_type_error = @as([]const u8, "typedConst cannot convert " ++ @typeName(@TypeOf(value)) ++ " to " ++ @typeName(ReturnType));
 
     switch (@typeInfo(SwitchType)) {
-        .Int => |target_type_info| {
+        .int => |target_type_info| {
             if (value >= std.math.maxInt(SwitchType)) {
                 if (target_type_info.signedness == .signed) {
-                    const UnsignedT = @Type(std.builtin.Type{ .Int = .{ .signedness = .unsigned, .bits = target_type_info.bits } });
+                    const UnsignedT = @Type(std.builtin.Type{ .int = .{ .signedness = .unsigned, .bits = target_type_info.bits } });
                     return @as(SwitchType, @bitCast(@as(UnsignedT, value)));
                 }
             }
             return value;
         },
-        .Pointer => |target_type_info| switch (target_type_info.size) {
+        .pointer => |target_type_info| switch (target_type_info.size) {
             .One, .Many, .C => {
                 switch (@typeInfo(@TypeOf(value))) {
-                    .ComptimeInt, .Int => {
+                    .comptime_int, .int => {
                         const usize_value = if (value >= 0) value else @as(usize, @bitCast(@as(isize, value)));
                         return @as(ReturnType, @ptrFromInt(usize_value));
                     },
@@ -252,12 +252,12 @@ pub fn typedConst2(comptime ReturnType: type, comptime SwitchType: type, comptim
             },
             else => target_type_error,
         },
-        .Optional => |target_type_info| switch (@typeInfo(target_type_info.child)) {
-            .Pointer => return typedConst2(ReturnType, target_type_info.child, value),
+        .optional => |target_type_info| switch (@typeInfo(target_type_info.child)) {
+            .pointer => return typedConst2(ReturnType, target_type_info.child, value),
             else => target_type_error,
         },
-        .Enum => |_| switch (@typeInfo(@TypeOf(value))) {
-            .Int => return @as(ReturnType, @enumFromInt(value)),
+        .@"enum" => |_| switch (@typeInfo(@TypeOf(value))) {
+            .int => return @as(ReturnType, @enumFromInt(value)),
             else => target_type_error,
         },
         else => @compileError(target_type_error),
